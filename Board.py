@@ -69,4 +69,27 @@ class Board:
             print([str(piece) for piece in rank])
         return ""
 
+    def valid_spot(rank, file):
+        return rank < Board.width && file < Board.width
 
+    def is_open(rank, file):
+        """ Return True if the position specified by rank, file is open (not
+        occupied by a piece); else, return False. """
+        if !valid_spot(rank, file): # move is outside of the board rip
+            return False
+        if board[rank][file] == "XX": # no pieces currently in the spot
+            return True
+        return False
+
+    def put_piece(piece, rank, file):
+        """ Put the specified piece in the specified position. If this move would
+        overwrite an existing piece with a new piece (not an empty space), then
+        perhaps do something to indicate that a piece has been captured? """
+        if board[rank][file] == "XX":
+            board[rank][file] = piece
+        else:
+
+
+    def set_open(rank, file):
+        """ Reset the specified position to open (eg. not containing a piece) """
+        put_piece("XX", rank, file) # i love being able to pass any datatype into functions
