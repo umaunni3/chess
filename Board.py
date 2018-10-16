@@ -1,4 +1,6 @@
 from Piece import *
+# from piece import Piece, Queen, King, Rook, Knight, Pawn, Bishop
+
 filemap = {"a":0, "b":1, "c":2, "d":3, "e":4, "f":5, "g":6, "h":7}
 class Board:
     """
@@ -11,8 +13,11 @@ class Board:
     board = []
     finished = False
     turn = 0 #0 will be white, 1 black
+    activePieces = {"w":[], "b":[]} # map between color and all active pieces of that color on board
+    captured = {"w":[], "b":[]} # map between color and pieces of that color that were captured
+    kings = {} # {clr : King of that color} (should only have two elements)
 
-    def __init__(self):
+    def __init__(self, idk):
         """Initializes the game board according to standard chess rules"""
         for rank in range(Board.width): #populate board
             self.board.append([])
@@ -22,20 +27,23 @@ class Board:
                 clr = "b"
             for file in range(Board.width): 
                 if rank in [1, 6]: #pawns
-                    self.board[-1].append(Pawn(rank, file, clr))
+                    piece = Pawn(rank, file, clr)
                 elif rank in [0, 7]:
                     if file == 0 or file == 7:
-                        self.board[-1].append(Rook(rank, file, clr))
+                        piece = Rook(rank, file, clr)
                     elif file == 1 or file == 6:
-                        self.board[-1].append(Knight(rank, file, clr))
+                        piece = Knight(rank, file, clr)
                     elif file == 2 or file == 5:
-                        self.board[-1].append(Bishop(rank, file, clr))
+                        piece = Bishop(rank, file, clr)
                     elif file == 3:
-                        self.board[-1].append(Queen(rank, file, clr))
+                        piece = Queen(rank, file, clr)
                     elif file == 4:
-                        self.board[-1].append(King(rank, file, clr))
+                        piece = King(rank, file, clr)
+                        Board.kings[clr] = piece
                 else:
-                    self.board[-1].append('XX') 
+                    piece = 'XX'
+                self.board[-1].append(piece)
+                Board.activePieces[clr].append(piece)
     
     def update(self):
         if self.finished == True:
@@ -69,27 +77,32 @@ class Board:
             print([str(piece) for piece in rank])
         return ""
 
-    def valid_spot(rank, file):
-        return rank < Board.width && file < Board.width
+    def validSpot(rank, file):
+        return rank < Board.width and file < Board.width
 
-    def is_open(rank, file):
+    def isOpen(rank, file):
         """ Return True if the position specified by rank, file is open (not
         occupied by a piece); else, return False. """
-        if !valid_spot(rank, file): # move is outside of the board rip
+        if not validSpot(rank, file): # move is outside of the board rip
             return False
         if board[rank][file] == "XX": # no pieces currently in the spot
             return True
         return False
 
-    def put_piece(piece, rank, file):
+    def putPiece(piece, rank, file):
         """ Put the specified piece in the specified position. If this move would
         overwrite an existing piece with a new piece (not an empty space), then
         perhaps do something to indicate that a piece has been captured? """
         if board[rank][file] == "XX":
             board[rank][file] = piece
         else:
+            if not isOpen(rank, file):
+                capturedPiece = board[rank][file] # piece being captured
+                captured[capturedPiece.clr].append(board[rank][file])
+                activePieces[color].remove(board[rank][file])
 
 
-    def set_open(rank, file):
+    def setOpen(rank, file):
         """ Reset the specified position to open (eg. not containing a piece) """
-        put_piece("XX", rank, file) # i love being able to pass any datatype into functions
+        putPiece("XX", rank, file) # i love being able to pass any datatype into functions
+        
