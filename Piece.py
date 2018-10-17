@@ -1,5 +1,7 @@
 # from Exception.py import * 
 import pygame
+# from main import * #displayHeight, displayWidth, edgeBuffer, squareWidth
+import main
 # import GUI
 # import GUI.PieceSprite
 
@@ -16,6 +18,9 @@ class Piece:
         self.clr = clr
         self.canJump = canJump
         self.active = True # set to inactive if captured, or for checking possible moves
+        # self.imageFile = ""
+        self.sprite = PieceSprite(self)
+
 
     def underAttack(self, board):
         """ Return True if this piece is under attack, else False. """
@@ -33,7 +38,11 @@ class Piece:
             # self.rank += 1 # just move one forward for now lol
             self.rank = rank
             self.file = file
+            self.sprite.updatePosition(rank, file)
+            print("move pos is ", rank, file)
             return
+
+
 
     
 
@@ -44,6 +53,8 @@ class Knight(Piece):
             self.imageFile = "assets/w_knight.png"
         elif self.clr == "b":
             self.imageFile = "assets/b_knight.png"
+
+        self.sprite.setImageFile(self.imageFile)
 
     def __str__(self):
         return self.clr + "N"
@@ -113,6 +124,8 @@ class Bishop(Piece):
         elif self.clr == "b":
             self.imageFile = "assets/b_bishop.png"
 
+        self.sprite.setImageFile(self.imageFile)
+
     def __str__(self):
         return self.clr + "B"
 
@@ -123,6 +136,9 @@ class Rook(Piece):
             self.imageFile = "assets/w_rook.png"
         elif self.clr == "b":
             self.imageFile = "assets/b_rook.png"
+
+        self.sprite.setImageFile(self.imageFile)
+
 
     def __str__(self):
         return self.clr + "R"
@@ -139,6 +155,8 @@ class Queen(Piece):
         elif self.clr == "b":
             self.imageFile = "assets/b_queen.png"
 
+        self.sprite.setImageFile(self.imageFile)
+
     def __str__(self):
         return self.clr + "Q"
 
@@ -150,6 +168,8 @@ class King(Piece):
         elif self.clr == "b":
             self.imageFile = "assets/b_king.png"
 
+        self.sprite.setImageFile(self.imageFile)
+        
     def __str__(self):
         return self.clr + "K"
     
@@ -162,6 +182,8 @@ class Pawn(Piece):
             self.imageFile = "assets/w_pawn.png"
         elif self.clr == "b":
             self.imageFile = "assets/b_pawn.png"
+
+        self.sprite.setImageFile(self.imageFile)
 
     def __str__(self):
         return self.clr + "p"
@@ -202,17 +224,49 @@ class Pawn(Piece):
                 # raise InvalidMoveException
                 return
     
+
+def rankFileToCoords(rank, file):
+    """ Takes in rank and file values and returns the corresponding (i, j) coordinate (i 
+    refers to y axis, j refers to x axis) """ 
+    # file = 7 - file
+    y = main.displayHeight - main.edgeBuffer - rank*main.squareWidth - 0.5*main.squareWidth
+    x = main.edgeBuffer + file*main.squareWidth + 0.5*main.squareWidth
+    return (x,y)
+
+
             
 
 
-# class PieceSprite(pygame.sprite.Sprite):
-#     def __init__(self, fileName, pos):
-#         pygame.sprite.Sprite.__init__(self)
-#         # self.image = pygame.Surface((50,50))
-#         self.image = pygame.image.load(fileName)
-#         self.image = pygame.transform.scale(self.image, (int(squareWidth*0.7), int(squareWidth*0.7)))
-#         # self.image.fill(BLACK)
-#         self.rect = self.image.get_rect()
-#         self.rect.center = pos #(displayWidth/2, displayHeight/2)
-#         self.dir = 1
+class PieceSprite(pygame.sprite.Sprite):
+    def __init__(self, piece):
+        pygame.sprite.Sprite.__init__(self)
+        self.piece = piece # keep a pointer to the Piece object it corresponds to
+        self.image = ":)" # gets set in setImageFile
+        self.rect = ":))" # gets set in setImageFile
+        if self.piece.clr == "w":
+            self.dir = -1 # travelling "up"; ie its rank increases as it goes up
+        else:
+            self.dir = 1
+
+    def setImageFile(self, file):
+        self.image = pygame.image.load(file)
+        self.image = pygame.transform.scale(self.image, (int(main.squareWidth*0.7), int(main.squareWidth*0.7)))
+        self.rect = self.image.get_rect()
+        self.rect.center = rankFileToCoords(self.piece.rank, self.piece.file) #(displayWidth/2, displayHeight/2)
+        
+    def updatePosition(self, rank, file):
+        """ Set this piece's rank and file to the provided values """
+        self.rank = rank
+        self.file = file
+        self.rect.center = rankFileToCoords(7-self.piece.rank, self.piece.file)
+
+    def update(self):
+        self.rect.center = rankFileToCoords(7-self.piece.rank, self.piece.file)
+
+
+    # @property
+    # def image(self):
+    #     img = pygame.image.load(self.piece.imageFile)
+    #     return pygame.transform.scale(img, (int(main.squareWidth*0.7), int(main.squareWidth*0.7)))
+
 

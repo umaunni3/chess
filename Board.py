@@ -1,5 +1,8 @@
 from Piece import *
+import Piece
 # from piece import Piece, Queen, King, Rook, Knight, Pawn, Bishop
+
+# print(Piece)
 
 filemap = {"a":0, "b":1, "c":2, "d":3, "e":4, "f":5, "g":6, "h":7}
 class Board:
@@ -17,7 +20,7 @@ class Board:
     captured = {"w":[], "b":[]} # map between color and pieces of that color that were captured
     kings = {} # {clr : King of that color} (should only have two elements)
 
-    def __init__(self, idk):
+    def __init__(self):
         """Initializes the game board according to standard chess rules"""
         for rank in range(Board.width): #populate board
             self.board.append([])
@@ -27,18 +30,18 @@ class Board:
                 clr = "b"
             for file in range(Board.width): 
                 if rank in [1, 6]: #pawns
-                    piece = Pawn(rank, file, clr)
+                    piece = Piece.Pawn(rank, file, clr)
                 elif rank in [0, 7]:
                     if file == 0 or file == 7:
-                        piece = Rook(rank, file, clr)
+                        piece = Piece.Rook(rank, file, clr)
                     elif file == 1 or file == 6:
-                        piece = Knight(rank, file, clr)
+                        piece = Piece.Knight(rank, file, clr)
                     elif file == 2 or file == 5:
-                        piece = Bishop(rank, file, clr)
+                        piece = Piece.Bishop(rank, file, clr)
                     elif file == 3:
-                        piece = Queen(rank, file, clr)
+                        piece = Piece.Queen(rank, file, clr)
                     elif file == 4:
-                        piece = King(rank, file, clr)
+                        piece = Piece.King(rank, file, clr)
                         Board.kings[clr] = piece
                 else:
                     piece = 'XX'
