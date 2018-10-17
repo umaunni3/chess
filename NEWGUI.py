@@ -146,11 +146,11 @@ while not crashed:
             # esc key
             if debug: # various testing functionalities to print info to the terminal during execution
                 print(event.key)
-                if event.key == 99: # c
+                if event.key == 99: # c; clear the selectedPiece
                     selectedPiece = None # clear it
-                elif event.key == 115: # s
+                elif event.key == 115: # s; print what the current selectedPiece is
                     print("current selected piece is " + str(selectedPiece))
-                elif event.key == 112: # p
+                elif event.key == 112: # p; print the position of the selectedPiece
                     if selectedPiece:
                         print("selectedPiece position is", + selectedPiece.piece.rank, selectedPiece.piece.file)
                     else:
