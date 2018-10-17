@@ -80,32 +80,40 @@ class Board:
             print([str(piece) for piece in rank])
         return ""
 
-    def validSpot(rank, file):
+    def validSpot(self, rank, file):
         return rank < Board.width and file < Board.width
 
-    def isOpen(rank, file):
+    def isOpen(self, rank, file):
         """ Return True if the position specified by rank, file is open (not
         occupied by a piece); else, return False. """
-        if not validSpot(rank, file): # move is outside of the board rip
+        if not self.validSpot(rank, file): # move is outside of the board rip
             return False
-        if board[rank][file] == "XX": # no pieces currently in the spot
+        if self.board[rank][file] == "XX": # no pieces currently in the spot
             return True
         return False
 
-    def putPiece(piece, rank, file):
+    def putPiece(self, piece, rank, file):
         """ Put the specified piece in the specified position. If this move would
         overwrite an existing piece with a new piece (not an empty space), then
         perhaps do something to indicate that a piece has been captured? """
-        if board[rank][file] == "XX":
-            board[rank][file] = piece
+        if self.board[rank][file] == "XX" or piece == "XX":
+            # moving piece to empty spot, or setting spot to empty
+            # after moving the piece that previously occupied it
+            self.board[rank][file] = piece
         else:
-            if not isOpen(rank, file):
-                capturedPiece = board[rank][file] # piece being captured
-                captured[capturedPiece.clr].append(board[rank][file])
-                activePieces[color].remove(board[rank][file])
+            if not self.isOpen(rank, file):
+                capturedPiece = self.board[rank][file] # piece being captured
+                self.captured[capturedPiece.clr].append(self.board[rank][file])
+                self.activePieces[capturedPiece.clr].remove(self.board[rank][file])
 
 
-    def setOpen(rank, file):
+    def setOpen(self, rank, file):
         """ Reset the specified position to open (eg. not containing a piece) """
-        putPiece("XX", rank, file) # i love being able to pass any datatype into functions
+        self.putPiece("XX", rank, file) # i love being able to pass any datatype into functions
         
+
+    def contents(self, pos):
+        """ Return whatever piece is in the spot specified, or "XX" if there is no piece. """ 
+        # switch i, j coords in this code because input pos has format (x,y) with horiz. coord first
+        # OH ALSO APPARENTLY SWITCH THE Y COORDINATE BECAUSE NOW THE BOARD PRINTOUT IS A LIE AND WHITE IS AT 0
+        return self.board[7-int(pos[1])][int(pos[0])]

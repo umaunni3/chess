@@ -65,6 +65,8 @@ def handleClick(pos):
     if debug:
         clickPosition = findCoordinates(pos)
         print(clickPosition)
+        print("is there a piece here??")
+        print(gameBoard.contents(clickPosition))
         if selectedPiece:
             # move that piece here
             selectedPiece.piece.move(gameBoard, clickPosition[1], clickPosition[0], debug)
@@ -123,6 +125,7 @@ def readBoard(board):
                 allPieces.add(board.board[i][j].sprite)
 
 readBoard(gameBoard)
+print(gameBoard)
 
 mousePos = None # keep track of mouse position onscreen
 
@@ -155,6 +158,11 @@ while not crashed:
                         print("selectedPiece position is", + selectedPiece.piece.rank, selectedPiece.piece.file)
                     else:
                         print("no piece currently selected!")
+                elif event.key == 108: # l; print legal moves for selected piece
+                    if selectedPiece and hasattr(selectedPiece.piece, "legalMoves"):
+                        print(str(selectedPiece) + " legal moves: " + str(selectedPiece.piece.legalMoves(gameBoard, debug)))
+                    else:
+                        print(str(selectedPiece) + " does not have a legalMoves method implemented :(")
             pass
     display.fill(WHITE)
     renderBoard()
