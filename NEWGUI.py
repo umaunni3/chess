@@ -69,7 +69,7 @@ def handleClick(pos):
             # move that piece here
             selectedPiece.piece.move(gameBoard, clickPosition[1], clickPosition[0], debug)
             print("* ", selectedPiece.piece.rank, selectedPiece.piece.file)
-            # selectedPiece = None
+            selectedPiece = None
 
         else:
             # did we collide with a piece? construct sprite for mouse and check for collisions
