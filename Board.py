@@ -81,11 +81,12 @@ class Board:
         return ""
 
     def validSpot(self, rank, file):
-        return rank < Board.width and file < Board.width
+        return int(rank) < Board.width and int(file) < Board.width
 
     def isOpen(self, rank, file):
         """ Return True if the position specified by rank, file is open (not
         occupied by a piece); else, return False. """
+        rank, file = int(rank), int(file)
         if not self.validSpot(rank, file): # move is outside of the board rip
             return False
         if self.board[rank][file] == "XX": # no pieces currently in the spot
@@ -96,6 +97,7 @@ class Board:
         """ Put the specified piece in the specified position. If this move would
         overwrite an existing piece with a new piece (not an empty space), then
         perhaps do something to indicate that a piece has been captured? """
+        rank, file = int(rank), int(file)
         if self.board[rank][file] == "XX" or piece == "XX":
             # moving piece to empty spot, or setting spot to empty
             # after moving the piece that previously occupied it
@@ -105,7 +107,7 @@ class Board:
                 capturedPiece = self.board[rank][file] # piece being captured
                 self.captured[capturedPiece.clr].append(self.board[rank][file])
                 self.activePieces[capturedPiece.clr].remove(self.board[rank][file])
-
+                capturedPiece.deactivate()
 
     def setOpen(self, rank, file):
         """ Reset the specified position to open (eg. not containing a piece) """

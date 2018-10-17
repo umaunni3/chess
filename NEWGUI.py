@@ -163,6 +163,12 @@ while not crashed:
                         print(str(selectedPiece) + " legal moves: " + str(selectedPiece.piece.legalMoves(gameBoard, debug)))
                     else:
                         print(str(selectedPiece) + " does not have a legalMoves method implemented :(")
+
+                elif event.key == 100: # d; deactivate/kill the selected piece
+                    if selectedPiece:
+                        selectedPiece.piece.deactivate()
+                    else:
+                        print("No selected piece to deactivate :(")
             pass
     display.fill(WHITE)
     renderBoard()
