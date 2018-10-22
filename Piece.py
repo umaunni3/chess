@@ -33,14 +33,49 @@ class Piece:
             if piece.active and piece is not self and piece.isAttacking(self):
                 return True
         return False
-    def move(self, board, rank, file, debug=True):
-        if debug:
-            # self.rank += 1 # just move one forward for now lol
-            self.rank = rank
-            self.file = file
+    def move(self, board, rank, file, debug=False, rankConverted=False):
+        # self.rank += 1 # just move one forward for now lol
+        if 0 <= rank < 8 and 0 <= file < 8:
+            # convert input rank, file (with top left (0,0)) to board rank, file (with bottom left (0,0))
+            if not rankConverted:
+                rank = 7 - rank # only do this if hasn't already been done before being passed in
+            prevRank, prevFile = self.rank, self.file
+            self.rank, self.file = int(rank), int(file)
             self.sprite.updatePosition(rank, file)
             print("move pos is ", rank, file)
+            Piece.updateBoard(self, board, prevRank, prevFile)
+            if isinstance(self, Pawn):
+                # set hasMoved attribute to true
+                self.hasMoved = True
             return
+        else:
+            print("you can't move here!")
+
+    def legalMoves(self, board, debug=False):
+        """ Placeholder method so that code doesn't error on pieces which do not yet
+        have a legalMoves method implemented """
+        return []
+
+    def updateBoard(piece, board, prevRank, prevFile):
+        """ Method for all Piece objects to call after executing their Move method;
+        this method updates the Board object to reflect the positions of the pieces. Takes in
+        a Board object, the piece's previous rank, and the piece's previous file. """
+        print("UPDATEBOARD METHOD")
+        print("prev: ", prevRank, prevFile)
+        print("new: ", piece.rank, piece.file)
+        board.putPiece(piece, piece.rank, piece.file) # put piece in its current position
+        board.setOpen(prevRank, prevFile)
+
+
+    def deactivate(self):
+        """ To be called when a piece is captured; set it to inactive, and stop it from 
+        rendering onscreen (remove its sprite) """
+        self.active = False
+        self.sprite.kill()
+
+    def isAttacking(self, board, other_piece):
+        """ Return True if this piece can legally capture other_piece """
+        return (other_piece.rank, other_piece.file) in self.legalMoves()
 
 
 
@@ -77,41 +112,38 @@ class Knight(Piece):
             return True
         return False
 
-    def move(self, board, rank, file, debug=False):
-        """ Move this piece to the specified rank and file
-        on the provided board if it is a legal move; else,
-        raise an error. """
-        if debug:
-            Piece.move(self, board, rank, file, debug)
+    def legalMoves(self, board, debug=False):
+        """ Return a list of the (rank, file) positions to which this piece
+        can legally move (not yet considering whether a move would reveal check
+        on this piece's king). Output in form of [(i0, j0), (i1, j1), ... ] """
+        # TODO: check if moving anywhere at all would reveal check
+        moves = [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]]
+        valid = []
+        for m in moves:
+            newPos = (self.rank+m[0], self.file+m[1])
+            print(newPos)
+            if board.validSpot(*newPos):# ensure it isn't out of bounds
+                otherPiece = board.contents(*newPos, rankConverted=True)
+                if otherPiece == "XX" or otherPiece.clr != self.clr: # if capturing another piece, ensure it isn't on our team
+                    valid.append(newPos)
 
+        return valid
+
+
+    def move(self, board, rank, file, debug=False, rankConverted=False):
+        rank, file = int(rank), int(file)
+        if not rankConverted:
+            rank = 7 - rank
+        if not board.validSpot(rank, file):
+            # dont do that smh
             return
-        if canMove(board, rank, file):
-            board.setOpen(self, self.rank, self.file)
-            if not board.isOpen(rank, file): # there's a piece there!
-                if isinstance(board.board[rank][file], King):
-                    # we're capturing the king! hmmmm should that happen? probably not
-                    board.finished = True
-                else:
-                    board.board[rank][file].active = False # capture it
-                    board.captured[self.clr].append(board.board[rank][file]) # add it to captured list
-                    if self.clr == "w":
-                        enemy = "b"
-                    else:
-                        enemy = "w"
-                    board.activePieces[enemy].remove(board.board[rank][file]) # remove from active list
-
-            board.putPiece(self, rank, file)
-            self.rank = rank
-            self.file = file
+        possibleMoves = self.legalMoves(board, debug)
+        if (rank, file) in possibleMoves:
+            Piece.move(self, board, rank, file, debug, rankConverted=True)
         else:
-            # raise InvalidMoveException
-            return
-        
+            print("Knight cannot move to ({}, {})".format(rank, file))
 
-    def isAttacking(self, board, other_piece):
-        """ Return True if this piece can legally capture other_piece """
-        # check if after moving this piece the king would be under attack
-        return canMove(board, other_piece.rank, other_piece.file)
+
 
 
 
@@ -128,6 +160,45 @@ class Bishop(Piece):
 
     def __str__(self):
         return self.clr + "B"
+
+    def legalMoves(self, board, debug=False):
+        """ Return a list of the (rank, file) positions to which this bishop
+        could legally move. Output in form of [(i0, j0), (i1, j2), ... ] """
+        valid = []
+        # check along files for each direction
+        directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+        print("EVALUATING BISHOP MOVES")
+        for d in directions:
+            print(d)
+            # check along the file until you hit another piece; if that piece
+            # is on our team, don't include it in list of moves, otherwise, include it
+            pos = (self.rank+d[0], self.file+d[1])
+            print("   ", pos)
+            while board.validSpot(*pos) and board.isOpen(*pos):
+                print("hai", pos)
+                valid.append(pos)
+                pos = (pos[0]+d[0], pos[1]+d[1])
+            print("oh")
+            if board.validSpot(*pos) and board.contents(*pos, rankConverted=True).clr != self.clr:
+                # it's an enemy piece! capturing it is a legal move!
+                valid.append(pos)
+
+        return valid
+
+
+    def move(self, board, rank, file, debug=False, rankConverted=False):
+        rank, file = int(rank), int(file)
+        if not rankConverted:
+            rank = 7 - rank
+        if not board.validSpot(rank, file):
+            # dont do that smh
+            return
+        possibleMoves = self.legalMoves(board, debug)
+        if (rank, file) in possibleMoves:
+            Piece.move(self, board, rank, file, debug, rankConverted=True)
+        else:
+            print("Bishop cannot move to ({}, {})".format(rank, file))
+
 
 class Rook(Piece):
     def __init__(self, *args, **kwargs):
@@ -180,50 +251,85 @@ class Pawn(Piece):
         super().__init__(*args, **kwargs, canJump = False)
         if self.clr == "w":
             self.imageFile = "assets/w_pawn.png"
+            self.dir = 1 # white pawns only move "up" on board (rank increases)
         elif self.clr == "b":
             self.imageFile = "assets/b_pawn.png"
+            self.dir = -1 # black pawns only move "down" on board (rank decreases)
+        self.hasMoved = False # use to determine if pawn can move two spaces or one
 
         self.sprite.setImageFile(self.imageFile)
 
     def __str__(self):
         return self.clr + "p"
 
-    def move(self, board, rank, file, debug=True):
+    def legalMoves(self, board, debug=False):
+        """ Return a list of the (rank, file) positions to which this pawn
+        could legally move. Output in form of [(i0, j0), (i1, j2), ... ] """
+        return self.capturingMoves(board, debug) + self.noncapturingMoves(board, debug)
+
+    def capturingMoves(self, board, debug=False):
+        """ Return a list of the places this piece can legally move IF
+        it is capturing (i.e. a diagonal move). """
+        moves = []
+        otherPiece = board.contents(self.rank+self.dir, self.file+1, rankConverted=True)
+
+        if not board.isOpen(self.rank+self.dir, self.file+1) and otherPiece.clr != self.clr: # capture diagonally forward, rights
+            moves.append((self.rank+self.dir, self.file+1))
+        otherPiece = board.contents(self.rank+self.dir, self.file-1, rankConverted=True)
+        if not board.isOpen(self.rank+self.dir, self.file-1) and otherPiece.clr != self.clr: # capture diagonally forward, left
+            moves.append((self.rank+self.dir, self.file-1))
+
+        return moves
+
+    def noncapturingMoves(self, board, debug=False):
+        moves = []
+        if not self.hasMoved and board.isOpen(self.rank+2*self.dir, self.file): # double move on first turn
+            # print("can move two!")
+            moves.append((self.rank+2*self.dir, self.file))
+        if board.isOpen(self.rank+self.dir, self.file):
+            moves.append((self.rank+self.dir, self.file)) # regular move forward
+
+        return moves
+
+
+    def canMove(self, board, rank, file, debug=False):
+        """ Takes in a position (rank, file) and returns whether 
+        this pawn can legally move to that position """
+        # if rank 
+        # if board.isOpen(rank, file)
+        pass
+
+    def move(self, board, rank, file, debug=False, rankConverted=False):
         """ Move this piece to the specified rank and file
         on the provided board if it is a legal move; else,
         raise an error. """
         # TODO: remember to add en passant rules lol but i'm tired now it's 3 AM
-        if debug:
-            # self.rank += 1 # just move one forward for now lol
-            Piece.move(self, board, rank, file, debug)
-            return
+        # adjust rank to board coords so we can properly check moves
+        if not rankConverted:
+            rank = 7 - rank
         if not board.validSpot(rank, file):
             # u can't do that!!
             # raise InvalidMoveException
             return
-        if board.isOpen(rank, file):
+        elif board.isOpen(rank, file):
             # cool! now lets check if pawns can do this move lol
-            if (file == self.file and rank == self.rank + 1 
-                        and not revealsCheck(self, rank, file)): # moving one place forward
-                board.setOpen(self.rank, self.file)
-                self.rank = rank
-                # TODO: confirm that moving forward will not put this pawn's king in check!!
+            # can only do a forwards move if the target space is empty
+            if (rank, file) in self.noncapturingMoves(board, debug):
+                # we can move here!
+                Piece.move(self, board, rank, file, debug, rankConverted=True)
             else:
-                # y u do dis
-                # raise InvalidMoveException
-                return
+                print("Pawn cannot move to " + str((rank, file)))
+
         else:
-            if (abs(file - self.file) == 1 and rank == self.rank + 1 
-                        and not revealsCheck(self, rank, file)): # capturing a piece
-                board.setOpen(self.rank, self.file)
-                self.rank = rank
-                self.file = file
-                # TODO: confirm that moving forward will not put this pawn's king in check!!
+            # there's a piece here! let's capture it!! but we can only do capturing move diagonally
+            # TODO: check if this move reveals check; if so, don't allow the move
+            
+
+            if (rank, file) in self.capturingMoves(board, debug):
+                Piece.move(self, board, rank, file, debug, rankConverted=True)
             else:
-                # stahp
-                # raise InvalidMoveException
-                return
-    
+                print("Pawn cannot move to " + str((rank, file)))
+
 
 def rankFileToCoords(rank, file):
     """ Takes in rank and file values and returns the corresponding (i, j) coordinate (i 
@@ -243,10 +349,6 @@ class PieceSprite(pygame.sprite.Sprite):
         self.piece = piece # keep a pointer to the Piece object it corresponds to
         self.image = ":)" # gets set in setImageFile
         self.rect = ":))" # gets set in setImageFile
-        if self.piece.clr == "w":
-            self.dir = -1 # travelling "up"; ie its rank increases as it goes up
-        else:
-            self.dir = 1
 
     def setImageFile(self, file):
         self.image = pygame.image.load(file)
@@ -258,11 +360,13 @@ class PieceSprite(pygame.sprite.Sprite):
         """ Set this piece's rank and file to the provided values """
         self.rank = rank
         self.file = file
-        self.rect.center = rankFileToCoords(7-self.piece.rank, self.piece.file)
+        self.rect.center = rankFileToCoords(self.piece.rank, self.piece.file)
 
     def update(self):
-        self.rect.center = rankFileToCoords(7-self.piece.rank, self.piece.file)
+        self.rect.center = rankFileToCoords(self.piece.rank, self.piece.file)
 
+    def __repr__(self):
+        return str(self.piece) + " sprite"
 
     # @property
     # def image(self):

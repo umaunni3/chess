@@ -15,6 +15,17 @@ else:
 if debug:
     print("running ChessBot in debug mode")
 
+if len(sys.argv) == 3: # we have additional param: file to read in!
+    readInFile = sys.argv[2]
+    try:
+        gameBoard = Board.Board(readInFile)
+    except:
+        gameBoard = Board.Board(readInFile)
+        # print("could not find specified filepath! loading standard board")
+        # gameBoard = Board.Board() # just a default board
+else:
+    gameBoard = Board.Board() # just a default board
+
 class MouseSprite(pygame.sprite.Sprite):
     def __init__(self, pos):
         pygame.sprite.Sprite.__init__(self)
@@ -22,6 +33,7 @@ class MouseSprite(pygame.sprite.Sprite):
         self.image.fill(BLACK)
         self.rect = self.image.get_rect()
         self.rect.center = pos
+
 
 
 def renderBoard():
@@ -49,43 +61,74 @@ def renderPiece(fileName, pos):
     display.blit(img, (x, y))
 
 def findCoordinates(pos):
-    """ takes in a position tuple and returns the corresponding i, j square """
+    """ takes in a position tuple and returns the corresponding rank, file square """
     x, y = pos[0], pos[1]
     x -= edgeBuffer
     y -= edgeBuffer
     numX, marginX = x // squareWidth, x % squareWidth
     numY, marginY = y // squareWidth, y % squareWidth
     # print(numX, numY)
-    return numX, numY
+    return numX, 7-numY
+
+def findDirectCoordinates(pos):
+    """ Return coordinates in standard pygame coordinates, but centered on
+    whatever square contains pos. Used only for square method testing. """
+    pass
 
 def handleClick(pos):
-    global gameBoard, selectedPiece, allPieces
+    global gameBoard, selectedPiece, allPieces, highlightSquares
     # print('haii')
 
     if debug:
         clickPosition = findCoordinates(pos)
-        print(clickPosition)
+        highlightSquare(pos)
+        print("c: ", clickPosition)
         print("is there a piece here??")
-        print(gameBoard.contents(clickPosition))
-        if selectedPiece:
-            # move that piece here
-            selectedPiece.piece.move(gameBoard, clickPosition[1], clickPosition[0], debug)
-            print("* ", selectedPiece.piece.rank, selectedPiece.piece.file)
+        highlightSquare(pos)
+        print("ooo", gameBoard.contents(clickPosition[1], clickPosition[0], True))
+        mouseSprite = MouseSprite(pos)
+        collidedPiece = pygame.sprite.spritecollideany(mouseSprite, allPieces)
+        if selectedPiece: # we already have a selected piece
+            # move that piece here if it's legal; deselect it no matter what
+            if (not collidedPiece) or collidedPiece.piece != selectedPiece.piece:
+                # either moving onto empty square, or capturing piece which isn't itself! no suicidal chess pieces :c
+                selectedPiece.piece.move(gameBoard, clickPosition[1], clickPosition[0], debug, rankConverted=True)
+                print("* ", selectedPiece.piece.rank, selectedPiece.piece.file)
+            
             selectedPiece = None
+            highlightSquares = []
 
         else:
-            # did we collide with a piece? construct sprite for mouse and check for collisions
-            mouseSprite = MouseSprite(pos)
-            collidedPiece = pygame.sprite.spritecollideany(mouseSprite, allPieces)
+            # did the mouse collide with a piece? construct sprite for mouse and check for collisions
+            
+            
             if collidedPiece: # collidedPiece is None if there was no collision
                 # set this piece to be the selected piece
                 selectedPiece = collidedPiece
+                possibleMoves = selectedPiece.piece.legalMoves(gameBoard, debug)
+                print("possible moves are!!: ", possibleMoves)
+                for move in possibleMoves:
+                    highlightSquare(move)
                 print(str(collidedPiece) + " is now selected")
+            else:
+                # highlightSquares = []
+                pass # nvm this highlighting stuff honestly
 
         print("after a click, " + str(selectedPiece) +  " is selected")
 
 
 
+def highlightSquare(pos):
+    """ Place a semi-transparent highlighting color over the square at the indicated (i,j) coordinate
+    to highlight it (to indicate legal moves, probably) """
+    global display, highlightSquares
+    print("hello! ", pos)
+    blitPosition = rankFileToCoords(*pos)
+    see_through = pygame.Surface((squareWidth, squareWidth)).convert_alpha()
+    see_through.fill(RED_HIGHLIGHT)
+    see_through_rect = see_through.get_rect(center=blitPosition)
+    highlightSquares.append([see_through, see_through_rect])
+    # display.blit(see_through, see_through_rect)
 
 pygame.init()
 
@@ -103,6 +146,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BROWN = (178, 129, 66)
 CREAM = (232, 219, 204)
+RED_HIGHLIGHT = (240, 50, 50, 100)
 
 allPieces = pygame.sprite.Group()
 
@@ -114,7 +158,7 @@ y = (displayHeight * 0.5)
 
 
 # get the board!
-gameBoard = Board.Board()
+# gameBoard = Board.Board()
 
 def readBoard(board):
     """ Go through the gameboard and read in all the pieces """
@@ -132,6 +176,8 @@ mousePos = None # keep track of mouse position onscreen
 selectedPiece = None # keep track of which piece, if any, has been selected by user (clicked)
 
 crashed = False # has game ended? should we halt the game rendering?
+
+highlightSquares = [] # list of squares to be highlighting
 
 while not crashed:
     mousePos = pygame.mouse.get_pos()
@@ -169,10 +215,44 @@ while not crashed:
                         selectedPiece.piece.deactivate()
                     else:
                         print("No selected piece to deactivate :(")
+
+                elif event.key == 118: # v; save board to file
+                    gameBoard.save("savefile.csv")
+
+                elif event.key == 104: # h; highlight a square
+                    pos = input("type the location to highlight! ") # should be in (x, y) format
+                    pos = pos[1:-1] # trim parentheses
+                    pos = pos.replace(" ", "") # get rid of spaces so it's in format x,y
+                    pos = pos.split(",") # split into [x, y]
+                    pos_tuple = tuple(map(int, pos)) # convert to integers
+                    highlightSquare(pos_tuple)
+
+                elif event.key == 107: # k; take in rank, file and print board contents
+                    r = input("type the rank of the square whose contents you want: ")
+                    f = input("type the file of the square whose contents you want: ")
+                    r = int(r)
+                    f = int(f)
+                    print(gameBoard.contents(r, f, True))
             pass
+
+    sqs = []
     display.fill(WHITE)
     renderBoard()
+    for sq in highlightSquares:
+        display.blit(*sq)
     allPieces.draw(display)
+    # see_through = pygame.Surface((100,100)).convert_alpha()
+    # see_through.fill(RED_HIGHLIGHT)
+    # see_through_rect = see_through.get_rect(bottomleft=display.get_rect().center)
+    # sqs.append([see_through, see_through_rect])
+
+    # see_through = pygame.Surface((100,100)).convert_alpha()
+    # see_through.fill(RED_HIGHLIGHT)
+    # see_through_rect = see_through.get_rect(center=display.get_rect().center)
+    # sqs.append([see_through, see_through_rect])
+
+    for pr in sqs:
+        display.blit(*pr)
     pygame.display.update()
     clock.tick(60)
 

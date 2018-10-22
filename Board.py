@@ -20,8 +20,11 @@ class Board:
     captured = {"w":[], "b":[]} # map between color and pieces of that color that were captured
     kings = {} # {clr : King of that color} (should only have two elements)
 
-    def __init__(self):
+    def __init__(self, srcFile=None):
         """Initializes the game board according to standard chess rules"""
+        if srcFile:
+            Board.readFile(srcFile)
+            return
         for rank in range(Board.width): #populate board
             self.board.append([])
             if rank < 4: 
@@ -47,6 +50,77 @@ class Board:
                     piece = 'XX'
                 self.board[-1].append(piece)
                 Board.activePieces[clr].append(piece)
+
+    def save(self, fileDest):
+        """ Takes in a filename and writes the current board state to a csv with 
+        that name. """
+
+        with open(fileDest, 'w+') as f:
+            # we will write to this file!
+            for row in Board.board[::-1]: # look erik i can use ur fancy syntax too
+                print(",".join(list(map(str, row))))
+                f.write(",".join(list(map(str, row))))
+                f.write("\n")
+
+
+        print("done writing!")
+
+
+
+
+
+    def readFile(srcFile):
+        """ Read in a board state from a csv file and store it in a Board. """
+        board = [[] for _ in range(8)]
+        with open(srcFile) as f:
+            rank = 7
+            for line in f:
+                print(line)
+                # starts with black, which is 7th rank
+                if rank < 0:
+                    raise ValueError
+                    return
+                chars = line.split(",")
+                this_line = []
+                file = 0
+                for val in chars:
+                    print("   " + str(val))
+                    if file > 7:
+                        raise ValueError
+                        return
+                    if val == "XX":
+                        this_line.append(val)
+                    elif len(val.strip()) == 2: # name in format bP, wQ, etc
+                        pieceType = val[1]
+                        clr = val[0]
+                        if pieceType == "Q":
+                            print("adding" + pieceType + " " + clr)
+                            piece = Piece.Queen(rank, file, clr)
+                        elif pieceType == "K":
+                            piece = Piece.King(rank, file, clr)
+                            print("adding" + pieceType + " " + clr)
+                        elif pieceType == "R":
+                            print("adding" + pieceType + " " + clr)
+                            piece = Piece.Rook(rank, file, clr)
+                        elif pieceType == "N":
+                            print("adding" + pieceType + " " + clr)
+                            piece = Piece.Knight(rank, file, clr)
+                        elif pieceType == "B":
+                            print("adding" + pieceType + " " + clr)
+                            piece = Piece.Bishop(rank, file, clr)
+                        elif pieceType == "p":
+                            print("adding" + pieceType + " " + clr)
+                            piece = Piece.Pawn(rank, file, clr)
+                    else:
+                        raise ValueError("unexpected input format! >:( " + str(val))
+                    this_line.append(piece)
+                    file += 1
+
+                board[rank] = this_line
+                rank -= 1
+
+        Board.board = board
+
     
     def update(self):
         if self.finished == True:
@@ -81,7 +155,7 @@ class Board:
         return ""
 
     def validSpot(self, rank, file):
-        return int(rank) < Board.width and int(file) < Board.width
+        return int(rank) < Board.width and int(rank) >= 0 and int(file) < Board.width and int(file) >= 0
 
     def isOpen(self, rank, file):
         """ Return True if the position specified by rank, file is open (not
@@ -98,6 +172,7 @@ class Board:
         overwrite an existing piece with a new piece (not an empty space), then
         perhaps do something to indicate that a piece has been captured? """
         rank, file = int(rank), int(file)
+        print("PUTPIECE: putting {} on rank {}, file{}".format(piece, rank, file))
         if self.board[rank][file] == "XX" or piece == "XX":
             # moving piece to empty spot, or setting spot to empty
             # after moving the piece that previously occupied it
@@ -114,8 +189,19 @@ class Board:
         self.putPiece("XX", rank, file) # i love being able to pass any datatype into functions
         
 
-    def contents(self, pos):
+    def contents(self, rank, file, rankConverted=False):
         """ Return whatever piece is in the spot specified, or "XX" if there is no piece. """ 
         # switch i, j coords in this code because input pos has format (x,y) with horiz. coord first
         # OH ALSO APPARENTLY SWITCH THE Y COORDINATE BECAUSE NOW THE BOARD PRINTOUT IS A LIE AND WHITE IS AT 0
-        return self.board[7-int(pos[1])][int(pos[0])]
+        # print("CONTENTS!!! rank={}, file={}".format(rank,file))
+        
+        rank, file = int(rank), int(file)
+        if not rankConverted:
+            print("CONTENTS!!! rank={}, file={}".format(rank,file))
+            file = 7 - file
+
+        print("UPDATED CONTENTS!!! rank={}, file={}".format(rank,file))
+        if file > 7 or file < 0 or rank > 7 or rank < 0:
+            print("can't move to rank {}, file {}".format(rank, file))
+            return
+        return self.board[rank][file]
